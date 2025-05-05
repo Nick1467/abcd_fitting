@@ -1,0 +1,74 @@
+# ABCD Matrix Fitting Implementation
+
+I've implemented a comprehensive solution for fitting microwave network parameters using ABCD matrices. The implementation allows you to:
+
+1. Fit transmission line lengths given a cable arrangement and Z0 values
+2. Fit RLC circuit parameters (resistance, inductance, capacitance)
+3. Fit magnon parameters (resonance frequency, damping rates)
+4. Fit any combination of the above parameters
+
+## Files Created
+
+1. __ABCD\_fitting.py__: The main library containing the `MicrowaveNetworkCalculator` class with all the fitting functionality.
+
+2. __fitting\_example.py__: A comprehensive example file showing different fitting scenarios with synthetic data.
+
+3. __simple\_fitting\_example.py__: A simpler example focused specifically on fitting transmission line lengths and magnon parameters.
+
+4. __real\_data\_fitting\_example.py__: A template for working with real measured S-parameter data that you can adapt to your specific needs.
+
+5. __README.md__: Documentation explaining how to use the code, including examples and parameter descriptions.
+
+## How to Use
+
+### Basic Workflow
+
+1. Define your network structure as a list of dictionaries, where each dictionary represents a network element (transmission line, RLC, magnon, etc.)
+2. Create a `MicrowaveNetworkCalculator` instance with your frequency range
+3. Use one of the fitting methods to fit parameters to your measured S-parameter data
+4. Compare the fitted results with your measured data using the visualization tools
+
+### For Transmission Line Fitting
+
+```python
+# Define your network template with initial guesses
+network_template = [
+    {'type': 'tline', 'z0': 50, 'length': 0.010},  # Initial guess
+    {'type': 'tline', 'z0': 75, 'length': 0.020},  # Initial guess
+]
+
+# Perform the fitting
+fitted_network = calculator.fit_transmission_line_lengths(
+    measured_s_params,  # Your measured S-parameter data
+    network_template,
+    verbose=1
+)
+```
+
+### For Magnon Parameter Fitting
+
+```python
+# Define your network template
+network_template = [
+    {'type': 'tline', 'z0': 50, 'length': 0.010},  # Known transmission line
+    {'type': 'magnon', 'omega_m': 4.5e9, 'gamma': 1e7, 'kappa': 5e7},  # Initial guess
+    {'type': 'tline', 'z0': 50, 'length': 0.010},  # Known transmission line
+]
+
+# Perform the fitting
+fitted_network = calculator.fit_magnon_parameters(
+    measured_s_params,
+    network_template,
+    magnon_indices=[1],  # Index of the magnon element to fit
+    verbose=1
+)
+```
+
+## Getting Started
+
+1. Start with the `simple_fitting_example.py` to understand the basic workflow
+2. Explore `fitting_example.py` for more comprehensive examples
+3. Use `real_data_fitting_example.py` as a template for your own data
+4. Refer to the `README.md` for detailed documentation
+
+The code is designed to be flexible and adaptable to different network configurations. You can define any combination of transmission lines, RLC circuits, and magnon elements in your network, and the fitting algorithms will optimize the parameters to match your measured S-parameter data.

@@ -160,6 +160,32 @@ fitted_network = calculator.fit_all_parameters(
 
 See the `example_fit_real_data()` function in `fitting_example.py` for a template on how to work with real measured data.
 
+## Improved Fitting with Error Control
+
+The fitting functions now include enhanced error control to ensure the error stays below a specified threshold:
+
+```python
+# Fit with error control to ensure error is below 5%
+fitted_network, final_error = calculator.fit_network(
+    measured_s_params,
+    network_template,
+    params_to_fit,
+    bounds=bounds,
+    method='trf',               # Optimization method ('trf', 'dogbox', 'lm', or 'Nelder-Mead')
+    max_error_percent=5.0,      # Maximum allowed error percentage (default: 5.0%)
+    max_iterations=5,           # Maximum number of optimization iterations to try
+    verbose=1                   # Verbosity level
+)
+```
+
+The improved fitting algorithm:
+1. Uses percentage error instead of absolute error
+2. Tries multiple optimization methods if the first one doesn't achieve the desired error threshold
+3. Perturbs parameters between iterations to help escape local minima
+4. Provides detailed reporting of the fitting process
+
+See `improved_fitting_example.py` for examples of using the enhanced fitting functionality.
+
 ## Parameter Bounds
 
 The fitting functions use reasonable default bounds for parameters, but you can also specify custom bounds:

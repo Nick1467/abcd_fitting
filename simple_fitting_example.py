@@ -10,7 +10,7 @@ def main():
     # Define frequency range
     f_start = 1e9   # 1 GHz
     f_stop = 10e9   # 10 GHz
-    f_points = 2001
+    f_points = 801
     frequencies = np.linspace(f_start, f_stop, f_points)
     
     # Create calculator

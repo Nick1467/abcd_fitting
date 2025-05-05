@@ -446,7 +446,8 @@ class MicrowaveNetworkCalculator:
 
     def fit_network(self, measured_s_params: np.ndarray, network_template: List[Dict], 
                    params_to_fit: Dict[int, List[str]], termination: str = None,
-                   bounds: Dict = None, method: str = 'trf', verbose: int = 1) -> Tuple[List[Dict], float]:
+                   bounds: Dict = None, method: str = 'trf', max_error_percent: float = 5.0,
+                   max_iterations: int = 5, verbose: int = 1) -> Tuple[List[Dict], float]:
         """
         Fit network parameters to match measured S-parameters.
         
@@ -457,11 +458,13 @@ class MicrowaveNetworkCalculator:
                            e.g., {0: ['length'], 5: ['omega_m', 'gamma', 'kappa']}
             termination: Optional termination type ('short', 'open', or None for matched load)
             bounds: Dictionary of parameter bounds {param_name: (lower_bound, upper_bound)}
-            method: Optimization method ('trf', 'dogbox', or 'lm')
+            method: Optimization method ('trf', 'dogbox', 'lm', or 'Nelder-Mead')
+            max_error_percent: Maximum allowed error percentage (default: 5.0%)
+            max_iterations: Maximum number of optimization iterations to try (default: 5)
             verbose: Verbosity level (0: silent, 1: progress, 2: detailed)
             
         Returns:
-            Tuple of (fitted_network, final_error)
+            Tuple of (fitted_network, final_error_percent)
         """
         # Create a deep copy of the network template to avoid modifying the original
         network = copy.deepcopy(network_template)
@@ -510,7 +513,7 @@ class MicrowaveNetworkCalculator:
         else:
             optimization_bounds = (-np.inf, np.inf)
         
-        # Define the error function to minimize
+        # Define the error function to minimize (using percentage error)
         def error_function(params):
             # Update network with current parameter values
             for i, (element_idx, param_name) in enumerate(param_mapping):
@@ -519,54 +522,163 @@ class MicrowaveNetworkCalculator:
             # Calculate S-parameters for the current network
             _, calculated_s_params = self.calculate_network(network, termination)
             
-            # Calculate error between measured and calculated S-parameters
+            # Calculate percentage error between measured and calculated S-parameters
             error = []
             for i in range(len(self.frequency_range)):
-                # Add errors for S11 (magnitude and phase)
-                s11_measured = measured_s_params[i][0, 0]
-                s11_calculated = calculated_s_params[i][0, 0]
-                error.append(np.abs(np.abs(s11_measured) - np.abs(s11_calculated)))
+                # Add errors for S11 (magnitude)
+                s11_measured_mag = np.abs(measured_s_params[i][0, 0])
+                s11_calculated_mag = np.abs(calculated_s_params[i][0, 0])
                 
-                # Add errors for S21 (magnitude and phase)
-                s21_measured = measured_s_params[i][1, 0]
-                s21_calculated = calculated_s_params[i][1, 0]
-                error.append(np.abs(np.abs(s21_measured) - np.abs(s21_calculated)))
+                # Avoid division by zero or very small values
+                if s11_measured_mag > 1e-6:
+                    s11_error_percent = 100 * np.abs(s11_measured_mag - s11_calculated_mag) / s11_measured_mag
+                else:
+                    s11_error_percent = 100 * np.abs(s11_measured_mag - s11_calculated_mag)
+                
+                error.append(s11_error_percent)
+                
+                # Add errors for S21 (magnitude)
+                s21_measured_mag = np.abs(measured_s_params[i][1, 0])
+                s21_calculated_mag = np.abs(calculated_s_params[i][1, 0])
+                
+                # Avoid division by zero or very small values
+                if s21_measured_mag > 1e-6:
+                    s21_error_percent = 100 * np.abs(s21_measured_mag - s21_calculated_mag) / s21_measured_mag
+                else:
+                    s21_error_percent = 100 * np.abs(s21_measured_mag - s21_calculated_mag)
+                
+                error.append(s21_error_percent)
                 
                 # Optionally add S12 and S22 errors if needed
-                # error.append(np.abs(np.abs(measured_s_params[i][0, 1]) - np.abs(calculated_s_params[i][0, 1])))
-                # error.append(np.abs(np.abs(measured_s_params[i][1, 1]) - np.abs(calculated_s_params[i][1, 1])))
+                # s12_measured_mag = np.abs(measured_s_params[i][0, 1])
+                # s12_calculated_mag = np.abs(calculated_s_params[i][0, 1])
+                # if s12_measured_mag > 1e-6:
+                #     error.append(100 * np.abs(s12_measured_mag - s12_calculated_mag) / s12_measured_mag)
+                
+                # s22_measured_mag = np.abs(measured_s_params[i][1, 1])
+                # s22_calculated_mag = np.abs(calculated_s_params[i][1, 1])
+                # if s22_measured_mag > 1e-6:
+                #     error.append(100 * np.abs(s22_measured_mag - s22_calculated_mag) / s22_measured_mag)
             
             return np.array(error)
         
-        # Run the optimization
+        # Define a scalar error function for methods that require it
+        def scalar_error_function(params):
+            return np.sum(error_function(params)**2)
+        
+        # Try different optimization methods until error is below threshold or max iterations reached
+        best_result = None
+        best_error = float('inf')
+        best_params = None
+        methods_to_try = [method]  # Start with the specified method
+        
+        # Add additional methods if needed
+        if method != 'Nelder-Mead':
+            methods_to_try.append('Nelder-Mead')  # Add Nelder-Mead as a backup
+        if method != 'L-BFGS-B' and 'L-BFGS-B' not in methods_to_try:
+            methods_to_try.append('L-BFGS-B')  # Add L-BFGS-B as another backup
+        
         if verbose >= 1:
             print(f"Starting optimization with {len(initial_values)} parameters to fit...")
             print(f"Initial parameters: {dict(zip(param_names, initial_values))}")
+            print(f"Target maximum error: {max_error_percent}%")
         
-        result = least_squares(
-            error_function, 
-            initial_values, 
-            bounds=optimization_bounds,
-            method=method,
-            verbose=2 if verbose >= 2 else 0
-        )
+        for iteration in range(max_iterations):
+            for opt_method in methods_to_try:
+                if verbose >= 1:
+                    print(f"\nIteration {iteration+1}/{max_iterations}, trying method: {opt_method}")
+                
+                try:
+                    if opt_method in ['trf', 'dogbox', 'lm']:
+                        # Use least_squares for these methods
+                        result = least_squares(
+                            error_function, 
+                            initial_values if iteration == 0 else best_params,
+                            bounds=optimization_bounds if opt_method != 'lm' else None,
+                            method=opt_method,
+                            verbose=2 if verbose >= 2 else 0,
+                            ftol=1e-6,
+                            xtol=1e-6,
+                            gtol=1e-6,
+                            max_nfev=1000
+                        )
+                        current_params = result.x
+                        current_error = np.mean(result.fun)
+                    else:
+                        # Use minimize for other methods
+                        result = minimize(
+                            scalar_error_function,
+                            initial_values if iteration == 0 else best_params,
+                            method=opt_method,
+                            bounds=[(lb[i], ub[i]) for i in range(len(lb))] if bounds else None,
+                            options={'disp': verbose >= 2, 'maxiter': 1000}
+                        )
+                        current_params = result.x
+                        current_error = np.mean(error_function(current_params))
+                    
+                    if verbose >= 1:
+                        print(f"Method {opt_method} completed with mean error: {current_error:.2f}%")
+                    
+                    # Check if this is the best result so far
+                    if current_error < best_error:
+                        best_error = current_error
+                        best_params = current_params
+                        best_result = result
+                        
+                        if verbose >= 1:
+                            print(f"New best error: {best_error:.2f}%")
+                        
+                        # If error is below threshold, we can stop
+                        if best_error < max_error_percent:
+                            if verbose >= 1:
+                                print(f"Error below threshold ({max_error_percent}%), stopping optimization")
+                            break
+                
+                except Exception as e:
+                    if verbose >= 1:
+                        print(f"Method {opt_method} failed: {str(e)}")
+                    continue
+            
+            # If error is below threshold, we can stop
+            if best_error < max_error_percent:
+                break
+            
+            # If we've tried all methods and still haven't reached the threshold,
+            # perturb the best parameters slightly and try again
+            if iteration < max_iterations - 1 and best_params is not None:
+                if verbose >= 1:
+                    print(f"Error still above threshold, perturbing parameters for next iteration")
+                
+                # Add random perturbation to best parameters (±10%)
+                perturbation = 0.1 * np.random.uniform(-1, 1, size=len(best_params))
+                initial_values = best_params * (1 + perturbation)
+                
+                # Ensure parameters stay within bounds
+                if bounds:
+                    for i in range(len(initial_values)):
+                        initial_values[i] = max(lb[i], min(ub[i], initial_values[i]))
         
-        # Update network with final fitted parameters
+        # If we didn't find any valid result, use the initial values
+        if best_params is None:
+            best_params = initial_values
+            best_error = np.mean(error_function(best_params))
+            if verbose >= 1:
+                print(f"No valid optimization result found, using initial values with error: {best_error:.2f}%")
+        
+        # Update network with best parameters
         for i, (element_idx, param_name) in enumerate(param_mapping):
-            network[element_idx][param_name] = result.x[i]
-        
-        # Calculate final error
-        final_error = np.sum(result.fun**2)
+            network[element_idx][param_name] = best_params[i]
         
         if verbose >= 1:
             print("\nFitting completed!")
-            print(f"Final error: {final_error}")
+            print(f"Final mean error: {best_error:.2f}%")
+            print(f"Error below threshold: {'Yes' if best_error < max_error_percent else 'No'}")
             print("\nFitted parameters:")
             for i, (element_idx, param_name) in enumerate(param_mapping):
                 element_type = network[element_idx]['type']
-                print(f"  {element_type}_{element_idx}_{param_name}: {result.x[i]}")
+                print(f"  {element_type}_{element_idx}_{param_name}: {best_params[i]}")
         
-        return network, final_error
+        return network, best_error
 
     def fit_transmission_line_lengths(self, measured_s_params: np.ndarray, network_template: List[Dict], 
                                      termination: str = None, verbose: int = 1) -> List[Dict]:
