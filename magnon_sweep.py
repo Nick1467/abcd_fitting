@@ -271,12 +271,55 @@ def example_magnon_sweep():
     omega_m_stop = 8e9    # 8 GHz
     omega_m_points = 21
     omega_m_range = np.linspace(omega_m_start, omega_m_stop, omega_m_points)
-    
+    '''
+    network = [
+        {'type': 'tline', 'z0': 50, 'length': 0.010},   # Known transmission line
+        
+        {'type': 'magnon', 'omega_m': 4e9, 'gamma': 2e7, 'kappa': 5e7},  # Initial guess for magnon
+        {'type': 'tline', 'z0': 50, 'length': 0.010},   # Known transmission line
+    ]
+
+    '''
     # Define network with magnon and transmission lines
     network = [
-        {'type': 'tline', 'z0': 50, 'length': 0.015},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+
         {'type': 'magnon', 'omega_m': 5e9, 'gamma': 5e6, 'kappa': 8e7},  # Magnon element
-        {'type': 'tline', 'z0': 50, 'length': 0.020},   # 20mm transmission line
+
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
+        {'type': 'tline', 'z0': 28, 'length': 0.007565},   # 15mm transmission line
+        {'type': 'tline', 'z0': 125, 'length': 0.034},   # 15mm transmission line
     ]
     
     print(f"Network structure:")
@@ -293,15 +336,15 @@ def example_magnon_sweep():
     
     # Perform the sweep and plot results
     print("\n1. Waterfall plot:")
-    sweep_magnon_omega_m(network, omega_m_range, frequencies, magnon_index=1, 
+    sweep_magnon_omega_m(network, omega_m_range, frequencies, 
                         plot_params=['S21'], db_scale=True, plot_type='waterfall')
     
     print("\n2. Heatmap plot:")
-    sweep_magnon_omega_m(network, omega_m_range, frequencies, magnon_index=1, 
+    sweep_magnon_omega_m(network, omega_m_range, frequencies,  
                         plot_params=['S11', 'S21'], db_scale=True, plot_type='heatmap')
     
     print("\n3. Line plot:")
-    sweep_magnon_omega_m(network, omega_m_range, frequencies, magnon_index=1, 
+    sweep_magnon_omega_m(network, omega_m_range, frequencies, 
                         plot_params=['S21'], db_scale=True, plot_type='lines')
 
 if __name__ == "__main__":
