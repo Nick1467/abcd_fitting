@@ -31,7 +31,7 @@ class MicrowaveNetworkCalculator:
             2x2 ABCD matrix as numpy array
         """
         # Calculate propagation constant (assuming lossless line)
-        c = 3e7  # Speed of light in m/s
+        c = 3e8/(3.38)**(1/2)  # Speed of light in m/s
         beta = 2 * np.pi * freq / c
         
         # Calculate ABCD parameters

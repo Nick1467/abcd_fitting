@@ -341,7 +341,7 @@ def example_magnon_sweep():
     
     print("\n2. Heatmap plot:")
     sweep_magnon_omega_m(network, omega_m_range, frequencies,  
-                        plot_params=['S11', 'S21'], db_scale=True, plot_type='heatmap')
+                        plot_params=[ 'S21'], db_scale=True, plot_type='heatmap')
     
     print("\n3. Line plot:")
     sweep_magnon_omega_m(network, omega_m_range, frequencies, 
